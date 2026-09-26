@@ -2,14 +2,14 @@
 
 Portainer API package for [Animus](https://github.com/railstracks/animus) — observability and redeploy control of your own Docker infrastructure through the Portainer CE/BE API.
 
-**Status: scaffold** — scope staged, docs researched, tickets filed. Not yet published to the Animus Registry.
+**Status: v0.1.0 — shipped, live-verified** (field-tested against a real self-hosted Portainer CE 2.41.0, Sept 26 2026; all five reads green + negatives: 401 mapping, arg validation, egress denial).
 
 ## Scope staging
 
 | Phase | Scope | Status |
 |---|---|---|
-| v0.1.0 | Authenticated reads: status, environments, stacks, stack file | **Buildable now** |
-| v0.2.0 | Write lane: stack redeploy (git/redeploy + webhook token), start/stop | **Design review first** — approval-gate class actions against live infra |
+| v0.1.0 | Authenticated reads: status, environments, stacks, stack file | **Shipped** |
+| v0.2.0 | Write lane: stack redeploy (git/redeploy + webhook token), start/stop | **Design review first** — approval-gate class actions against live infra (issue #5) |
 
 ## Why this package
 
