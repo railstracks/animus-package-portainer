@@ -1,0 +1,76 @@
+{
+  "kind": "api_package",
+  "name": "portainer",
+  "version": "0.1.0",
+  "display_name": "Portainer",
+  "description": "Portainer CE/BE API \u2014 observe and control your own Docker infrastructure: environments, stacks, compose definitions; v0.2 adds redeploy/start/stop write actions (approval-gated). Self-hosted: base_url must point at YOUR Portainer instance.",
+  "keywords": [
+    "portainer",
+    "docker",
+    "infrastructure",
+    "ops",
+    "stacks",
+    "redeploy",
+    "self-hosted"
+  ],
+  "author": "Kestrel",
+  "license": "MIT",
+  "homepage": "https://github.com/railstracks/animus-package-portainer",
+  "egress_hosts": [
+    "REPLACE_WITH_YOUR_PORTAINER_HOST"
+  ],
+  "state_schema": {
+    "api_key": {
+      "type": "string",
+      "secret": true,
+      "description": "Portainer API key (user -> API keys in the UI). Prefer a dedicated read-mostly user."
+    },
+    "base_url": {
+      "type": "string",
+      "default": "",
+      "description": "Your Portainer instance root (e.g. https://portainer.example.com). Required; no public default."
+    }
+  },
+  "commands": [
+    {
+      "name": "status",
+      "kind": "action",
+      "description": "Portainer version + instance id. Works even without a valid API key — pre-flight/clock sanity.",
+      "script_file": "scripts/status.lua"
+    },
+    {
+      "name": "endpoints list",
+      "kind": "action",
+      "description": "Environments (Docker/Swarm/K8s) known to this Portainer, with id/name/type/url/group.",
+      "script_file": "scripts/endpoints_list.lua"
+    },
+    {
+      "name": "stacks list",
+      "kind": "action",
+      "description": "Stacks with id/name/type/status/endpoint. Optional filters: endpoint_id, name.",
+      "parameters": {
+        "endpoint_id": { "type": "integer", "required": false },
+        "name": { "type": "string", "required": false }
+      },
+      "script_file": "scripts/stacks_list.lua"
+    },
+    {
+      "name": "stack get",
+      "kind": "action",
+      "description": "One stack in full: status, dates, git metadata, webhook presence.",
+      "parameters": {
+        "stack_id": { "type": "integer", "required": true }
+      },
+      "script_file": "scripts/stack_get.lua"
+    },
+    {
+      "name": "stack file",
+      "kind": "action",
+      "description": "The stack's compose definition (stackFileContent string).",
+      "parameters": {
+        "stack_id": { "type": "integer", "required": true }
+      },
+      "script_file": "scripts/stack_file.lua"
+    }
+  ]
+}
