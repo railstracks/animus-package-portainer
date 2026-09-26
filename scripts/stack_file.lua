@@ -12,8 +12,13 @@ function run(ctx)
   if not r.ok then
     return { success = false, error = r.error, http_status = r.http_status }
   end
-  if type(r.json) ~= "table" or r.json.stackFileContent == nil then
+  -- Live catch (CE 2.41.0, field-tested): GET /stacks/{id}/file returns
+  -- PascalCase "StackFileContent" while most other endpoints are lowercase.
+  -- Accept both; the value passes through verbatim either way.
+  local content = (type(r.json) == "table") and
+    (r.json.stackFileContent or r.json.StackFileContent)
+  if content == nil then
     return { success = false, error = "unexpected response shape (expected stackFileContent)" }
   end
-  return { success = true, data = { stack_file = r.json.stackFileContent } }
+  return { success = true, data = { stack_file = content } }
 end

@@ -170,10 +170,14 @@ check("stack get 404 normalized",
       r.success == false and r.error:find("not found") ~= nil and r.http_status == 404)
 
 -- ---- stack file -------------------------------------------------------------
-fixture = { status = 200, json = { stackFileContent = "services:\n  a:\n    image: x\n" } }
+fixture = { status = 200, json = { StackFileContent = "services:\n  a:\n    image: x\n" } }
 r = stack_file_cmd(mkctx({ stack_id = 11 }))
-check("stack file success",
+check("stack file success (live PascalCase shape)",
       r.success == true and r.data.stack_file:find("services:") ~= nil)
+fixture = { status = 200, json = { stackFileContent = "services:\n  b:\n    image: y\n" } }
+r = stack_file_cmd(mkctx({ stack_id = 11 }))
+check("stack file success (lowercase shape)",
+      r.success == true and r.data.stack_file:find("image: y") ~= nil)
 check("stack file url", captured.url == "https://p.example.com/api/stacks/11/file")
 
 fixture = { status = 200, json = { wrong = "shape" } }

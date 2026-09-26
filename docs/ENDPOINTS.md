@@ -25,7 +25,9 @@ Two options; the package uses **API keys**.
 | endpoints list | `GET /endpoints` | environments (Docker/Swarm/K8s), with pagination query params |
 | stacks list | `GET /stacks` | supports `filters` JSON query (e.g. by endpointId, SwarmID, status) |
 | stack get | `GET /stacks/{id}` | full stack object: status, creationDate, updateDate, git metadata, webhook field |
-| stack file | `GET /stacks/{id}/file` | the compose file content (stackFileContent) |
+| stack file | `GET /stacks/{id}/file` | the compose file content — **response key is `StackFileContent` (PascalCase) on CE 2.41.0 live**, unlike most other endpoints |
+
+PUT /stacks/{id} (update definition) **requires `?endpointId=` query param** on CE 2.41.0 live (400 otherwise); PUT response Status=3 means "deploying" (1=active, 2=inactive).
 
 Stack object notes: `Status` (1=active, 2=inactive), `Type` (1=swarm, 2=compose), `EndpointID`, `Webhook` (token string — present iff webhook enabled for the stack), `GitConfig` when git-backed.
 
