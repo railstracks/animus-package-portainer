@@ -9,7 +9,11 @@ Portainer API package for [Animus](https://github.com/railstracks/animus) — ob
 | Phase | Scope | Status |
 |---|---|---|
 | v0.1.0 | Authenticated reads: status, environments, stacks, stack file | **Shipped** |
-| v0.2.0 | Write lane: stack redeploy (git/redeploy + webhook token), start/stop | **Design review first** — approval-gate class actions against live infra (issue #5) |
+| v0.2.0 | Stack lifecycle writes: start/stop, git redeploy, webhook create/invoke, update definition (payload-gated) | **Blocked on #5 design review** (kernel approval gate #25/#106 still open) — issue #6 |
+| v0.3.0 | Observability reads: system info, endpoint summary/inspect, snapshot, docker-proxy (containers/inspect/logs/stats, images, volumes, networks), dashboard, tags, custom templates, settings read | **Devex lane — unblocked** (pure reads, no gate dependency) — issue #7 |
+| v0.4.0 | Control writes via proxy: container restart/start/stop, image pull/delete, container delete, tags CRUD | **Do-not-start** until v0.2 gate pattern proven in production — issue #8 |
+
+Full map incl. the 199 fenced operations and their reasons: `docs/ENDPOINTS.md`.
 
 ## Why this package
 
