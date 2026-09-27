@@ -136,6 +136,7 @@ r = endpoints_cmd(mkctx())
 check("endpoints success", r.success == true and #r.data == 2 and r.data[2].Name == "swarm")
 check("endpoints url", captured.url == "https://p.example.com/api/endpoints")
 check("endpoints auth header", captured.headers["X-API-Key"] == "KEY1")
+check("content-type on all requests", (captured.headers or {})["Content-Type"] == "application/json")
 
 fixture = { status = 401, json = { message = "Unauthorized" } }
 r = endpoints_cmd(mkctx())

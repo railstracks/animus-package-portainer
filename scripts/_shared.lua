@@ -28,8 +28,11 @@ function shared.normalize_base(u)
 end
 
 -- Auth header only when a key is configured (status works without one).
+-- Content-Type is required on any request WITH a body: Portainer's JSON
+-- payload parser only engages for application/json (live catch #5 — PUTs
+-- parsed as empty without it, 400 "Invalid request payload").
 function shared.headers(pkg)
-  local h = { ["Accept"] = "application/json" }
+  local h = { ["Accept"] = "application/json", ["Content-Type"] = "application/json" }
   local k = pkg.get_state("api_key")
   if k ~= nil and k ~= "" and k ~= "***" then
     h["X-API-Key"] = tostring(k)
