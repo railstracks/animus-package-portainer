@@ -1,7 +1,8 @@
 {
   "kind": "api_package",
   "name": "portainer",
-  "version": "0.2.0",
+  "version": "0.2.1",
+  "writes_gated": true,
   "display_name": "Portainer",
   "description": "Portainer CE/BE API — observe and control your own Docker infrastructure: environments, stacks, compose definitions; v0.2 adds redeploy/start/stop write actions (approval-gated). Self-hosted: base_url must point at YOUR Portainer instance.",
   "keywords": [

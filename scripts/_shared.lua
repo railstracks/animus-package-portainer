@@ -94,6 +94,15 @@ end
 
 function shared.interpret(r)
   if r == nil then return { ok = false, error = "no response from transport" } end
+  -- #126 kernel write-gate hold: distinguish from transport errors — the
+  -- request never left the host and the caller can act on the digest.
+  if shared.is_approval_hold(r) then
+    -- r.error carries the kernel's full route text (digest + approve URL);
+    -- keep it — the marker alone loses the actionable part.
+    return { ok = false, held = true, digest = r.digest,
+             expires_at_unix_ms = r.expires_at_unix_ms,
+             error = tostring(r.error or "approval_required") }
+  end
   if r.error ~= nil and r.error ~= "" then
     return { ok = false, error = "transport error: " .. tostring(r.error),
              http_status = r.status }
@@ -134,6 +143,23 @@ function shared.require_writes(pkg)
   if v == "true" then return true end
   return nil, "write lane disabled — set package state writes_enabled=true to arm " ..
     "(commands remain confirm-gated and audit-logged; see docs/WRITE-LANE-DESIGN.md)"
+end
+
+-- #126 kernel gate pass-through: when the package manifest sets
+-- writes_gated, the kernel holds sandbox writes until the owner approves
+-- the exact payload digest. Surface that hold as a first-class package
+-- error carrying the digest + approve route, instead of a generic
+-- transport failure.
+function shared.is_approval_hold(r)
+  return r ~= nil and r.approval_required == true and r.digest ~= nil and r.digest ~= ""
+end
+
+function shared.approval_hold_error(r, pkg)
+  return "write held for owner approval (kernel gate, animus#126): digest " ..
+    tostring(r.digest) .. " — approve via admin API " ..
+    "POST /api/v1/api/packages/" .. tostring(pkg and pkg.id or "<package-id>") ..
+    "/approvals/" .. tostring(r.digest) ..
+    " then retry the identical command (one-shot, payload-bound)"
 end
 
 -- Confirm is a NAME MATCH, not a boolean: the caller must restate the

@@ -83,6 +83,16 @@ check("interpret 401 surfaces message",
 r = shared.interpret({ status = 404, body = '{"message":"Stack not found"}' })
 check("interpret 404 falls back to body", r.ok == false and r.error:find("not found"))
 
+-- #126 kernel write-gate hold (v0.2.1): digest + route text survive
+r = shared.interpret({ status = 0, approval_required = true, digest = "ab12",
+                       expires_at_unix_ms = 1700000000000,
+                       error = "approval_required: write POST held ... POST /api/v1/api/packages/PID/approvals/ab12" })
+check("hold not ok", r.ok == false)
+check("hold carries digest", r.digest == "ab12")
+check("hold keeps route text", (r.error or ""):find("/approvals/ab12", 1, true) ~= nil)
+check("non-hold not confused", shared.is_approval_hold({ error = "x" }) == false)
+check("nil not confused", shared.is_approval_hold(nil) == false)
+
 -- get (config gate + url build) ---------------------------------------------
 local captured
 local stub_ctx = {
