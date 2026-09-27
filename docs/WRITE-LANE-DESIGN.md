@@ -74,8 +74,9 @@ actions stay out of v0.2 entirely. No split to design.
 
 **Q2 — webhook invoke.** Deferred to Tier 2's arrival (it's the ideal first test case: the token
 is a credential-shaped *argument*, must never be logged, and the invoke path bypasses API-key
-audit richness). v0.2 ships webhook **list (tokens masked)** and **create/delete** (gated like
-all writes) — an operator wanting keyless redeploy can create the webhook and curl it from their
+audit richness). v0.2 ships webhook **list (tokens masked)** and **delete**; create was dropped
+in the field test (live catch #4: only ServiceWebhook type exists on
+`POST /webhooks`; stack webhooks are auto-update config — redesign in v0.2.x) — an operator wanting keyless redeploy can create the webhook and curl it from their
 own surface.
 
 **Q3 — update definition.** In, with the diff-presentation design (Tier 1 §3). Field data: this

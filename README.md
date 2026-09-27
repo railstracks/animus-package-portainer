@@ -9,7 +9,7 @@ Portainer API package for [Animus](https://github.com/railstracks/animus) — ob
 | Phase | Scope | Status |
 |---|---|---|
 | v0.1.0 | Authenticated reads: status, environments, stacks, stack file | **Shipped** |
-| v0.2.0 | Stack lifecycle writes: start/stop, git redeploy, webhooks (create/delete, tokens masked), update definition (diff echo) | **Implemented (Tier 1)** per #5 design — state gate + confirm-name + audit; field test pending. Kernel gate tracked as animus#126 |
+| v0.2.0 | Stack lifecycle writes: start/stop, git redeploy, webhooks (list + delete, tokens masked), update definition (diff echo) | **Implemented (Tier 1)** per #5 design — state gate + confirm-name + audit; field test pending. Kernel gate tracked as animus#126 |
 | v0.3.0 | Observability reads: system info, endpoint summary/inspect, snapshot, docker-proxy (containers/inspect/logs/stats, images, volumes, networks), dashboard, tags, custom templates, settings read | **Devex lane — unblocked** (pure reads, no gate dependency) — issue #6 |
 | v0.4.0 | Control writes via proxy: container restart/start/stop, image pull/delete, container delete, tags CRUD | **Do-not-start** until v0.2 gate pattern proven in production — issue #8 |
 

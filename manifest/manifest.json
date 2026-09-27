@@ -166,22 +166,6 @@
       "script_file": "scripts/webhooks_list.lua"
     },
     {
-      "name": "webhook create",
-      "kind": "action",
-      "description": "Create a stack-redeploy webhook (type 0). Token masked in result. Write lane gates apply.",
-      "parameters": {
-        "stack_id": {
-          "type": "integer",
-          "required": true
-        },
-        "confirm": {
-          "type": "string",
-          "required": true
-        }
-      },
-      "script_file": "scripts/webhook_create.lua"
-    },
-    {
       "name": "webhook delete",
       "kind": "action",
       "description": "Delete a webhook by id. Confirm = the webhook id as a string. Write lane gates apply.",

@@ -335,19 +335,10 @@ do
         json.encode(r.data):find("anothersecret", 1, true) == nil)
 end
 
--- webhook create: masked response, type 0 body
-do
-  local wc = load_cmd("webhook_create")
-  local ctx = mkctx({ stack_id = 11, confirm = "animus_test_node" }, { writes_enabled = "true", base_url = "https://p.example.com", api_key = "KEY1" })
-  queue = { fix_stack(),
-            { status = 200, json = { Id = 9, Token = "created-secret-token", ResourceId = "11", EndpointId = 3, Type = 0 } } }
-  local r = wc(ctx)
-  check("webhook create: success", r.success == true)
-  check("webhook create: token masked", r.data.webhook.Token ~= nil and
-        r.data.webhook.Token:find("created%-secret") == nil)
-  check("webhook create: body shape", captured.body:find('"WebhookType":0') ~= nil and
-        captured.body:find('"ResourceID":"11"') ~= nil)
-end
+-- webhook create: REMOVED from v0.2.0 — live catch #4: the OpenAPI enum {0,1}
+-- is stale on CE 2.41.0; source: `_ = iota; ServiceWebhook` (1). Stack webhooks
+-- are stack auto-update config (PUT /stacks/{id}/git AutoUpdate), not POST /webhooks.
+-- Service webhooks (type 1) are out of this package's identity. Redesign = v0.2.x.
 
 -- webhook delete: unknown id → not found, no DELETE; confirm=id → DELETE
 do

@@ -77,7 +77,7 @@ Mechanically enumerated from the artifact — this is the complete surface, not 
 | redeploy git | `PUT /stacks/{id}/git/redeploy` | source-of-truth driven |
 | redeploy webhook | `POST /stacks/webhooks/{webhookID}` | token auth, no API key |
 | webhooks list | `GET /webhooks` | ⚠️ returns `Token` fields — must be masked in command output |
-| webhook create/delete | `POST /webhooks` / `DELETE /webhooks/{id}` | enables keyless redeploy |
+| webhook delete | `DELETE /webhooks/{id}` | **live catch #4:** `POST /webhooks` on CE 2.41.0 only accepts ServiceWebhook (type 1 — source: `_ = iota; ServiceWebhook`; the spec's enum {0,1} is stale and rejects 0). Stack webhooks = auto-update config via `PUT /stacks/{id}/git` `AutoUpdate`, not this route. Create dropped from v0.2.0 |
 | update definition | `PUT /stacks/{id}` | verified live: requires `?endpointId=` query param; response `Status:3` = deploying |
 
 Deferred within the lane: `PUT /stacks/{id}/git` (git config update), `POST /stacks/{id}/migrate`,
