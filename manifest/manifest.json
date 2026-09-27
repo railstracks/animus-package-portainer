@@ -1,9 +1,9 @@
 {
   "kind": "api_package",
   "name": "portainer",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "display_name": "Portainer",
-  "description": "Portainer CE/BE API \u2014 observe and control your own Docker infrastructure: environments, stacks, compose definitions; v0.2 adds redeploy/start/stop write actions (approval-gated). Self-hosted: base_url must point at YOUR Portainer instance.",
+  "description": "Portainer CE/BE API — observe and control your own Docker infrastructure: environments, stacks, compose definitions; v0.2 adds redeploy/start/stop write actions (approval-gated). Self-hosted: base_url must point at YOUR Portainer instance.",
   "keywords": [
     "portainer",
     "docker",
@@ -29,6 +29,11 @@
       "type": "string",
       "default": "",
       "description": "Your Portainer instance root (e.g. https://portainer.example.com). Required; no public default."
+    },
+    "writes_enabled": {
+      "type": "string",
+      "default": "false",
+      "description": "Arm the write lane (stack start/stop/redeploy/update, webhook create/delete). Default false. Commands remain confirm-gated (confirm=\"<target name>\") and audit-logged. Guards accidental actions, not hostile callers — see docs/WRITE-LANE-DESIGN.md."
     }
   },
   "commands": [
@@ -49,8 +54,14 @@
       "kind": "action",
       "description": "Stacks with id/name/type/status/endpoint. Optional filters: endpoint_id, name.",
       "parameters": {
-        "endpoint_id": { "type": "integer", "required": false },
-        "name": { "type": "string", "required": false }
+        "endpoint_id": {
+          "type": "integer",
+          "required": false
+        },
+        "name": {
+          "type": "string",
+          "required": false
+        }
       },
       "script_file": "scripts/stacks_list.lua"
     },
@@ -59,7 +70,10 @@
       "kind": "action",
       "description": "One stack in full: status, dates, git metadata, webhook presence.",
       "parameters": {
-        "stack_id": { "type": "integer", "required": true }
+        "stack_id": {
+          "type": "integer",
+          "required": true
+        }
       },
       "script_file": "scripts/stack_get.lua"
     },
@@ -68,9 +82,120 @@
       "kind": "action",
       "description": "The stack's compose definition (stackFileContent string).",
       "parameters": {
-        "stack_id": { "type": "integer", "required": true }
+        "stack_id": {
+          "type": "integer",
+          "required": true
+        }
       },
       "script_file": "scripts/stack_file.lua"
+    },
+    {
+      "name": "stack start",
+      "kind": "action",
+      "description": "Start a stopped stack. Write lane: requires writes_enabled=true state and confirm=\"<stack name>\".",
+      "parameters": {
+        "stack_id": {
+          "type": "integer",
+          "required": true
+        },
+        "confirm": {
+          "type": "string",
+          "required": true
+        }
+      },
+      "script_file": "scripts/stack_start.lua"
+    },
+    {
+      "name": "stack stop",
+      "kind": "action",
+      "description": "Stop an active stack (availability only; volumes/definitions untouched). Write lane gates apply.",
+      "parameters": {
+        "stack_id": {
+          "type": "integer",
+          "required": true
+        },
+        "confirm": {
+          "type": "string",
+          "required": true
+        }
+      },
+      "script_file": "scripts/stack_stop.lua"
+    },
+    {
+      "name": "stack redeploy",
+      "kind": "action",
+      "description": "Git-backed stacks: pull current source and redeploy (prune always false). Write lane gates apply.",
+      "parameters": {
+        "stack_id": {
+          "type": "integer",
+          "required": true
+        },
+        "confirm": {
+          "type": "string",
+          "required": true
+        }
+      },
+      "script_file": "scripts/stack_redeploy.lua"
+    },
+    {
+      "name": "stack update",
+      "kind": "action",
+      "description": "Replace a stack's stored compose definition. Result carries a line diff of the change. Write lane gates apply.",
+      "parameters": {
+        "stack_id": {
+          "type": "integer",
+          "required": true
+        },
+        "confirm": {
+          "type": "string",
+          "required": true
+        },
+        "content": {
+          "type": "string",
+          "required": true,
+          "description": "full new compose file content"
+        }
+      },
+      "script_file": "scripts/stack_update.lua"
+    },
+    {
+      "name": "webhooks list",
+      "kind": "action",
+      "description": "All webhooks with tokens masked.",
+      "parameters": {},
+      "script_file": "scripts/webhooks_list.lua"
+    },
+    {
+      "name": "webhook create",
+      "kind": "action",
+      "description": "Create a stack-redeploy webhook (type 0). Token masked in result. Write lane gates apply.",
+      "parameters": {
+        "stack_id": {
+          "type": "integer",
+          "required": true
+        },
+        "confirm": {
+          "type": "string",
+          "required": true
+        }
+      },
+      "script_file": "scripts/webhook_create.lua"
+    },
+    {
+      "name": "webhook delete",
+      "kind": "action",
+      "description": "Delete a webhook by id. Confirm = the webhook id as a string. Write lane gates apply.",
+      "parameters": {
+        "webhook_id": {
+          "type": "integer",
+          "required": true
+        },
+        "confirm": {
+          "type": "string",
+          "required": true
+        }
+      },
+      "script_file": "scripts/webhook_delete.lua"
     }
   ]
 }

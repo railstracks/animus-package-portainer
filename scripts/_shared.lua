@@ -95,7 +95,9 @@ function shared.interpret(r)
     return { ok = false, error = "transport error: " .. tostring(r.error),
              http_status = r.status }
   end
-  if r.status == 200 then
+  -- 2xx-wide success: Portainer returns 202 for webhook delete/execute
+  -- and 202/204 for other accepted-writes (found field-testing v0.2).
+  if r.status >= 200 and r.status < 300 then
     return { ok = true, json = r.json, body = r.body }
   end
   local why
@@ -117,6 +119,156 @@ function shared.interpret(r)
     detail = " — " .. tostring(r.body):sub(1, 300)
   end
   return { ok = false, error = why .. detail, http_status = r.status }
+end
+
+-- ==== write-lane core (v0.2, docs/WRITE-LANE-DESIGN.md) ====
+
+-- Writes are a state gate, default-off. Guards accidental agent actions;
+-- NOT a security boundary against a rogue caller (that is kernel Tier 2,
+-- animus#126). Refusal is loud and names the key.
+function shared.require_writes(pkg)
+  local v = pkg.get_state("writes_enabled")
+  if v == "true" then return true end
+  return nil, "write lane disabled — set package state writes_enabled=true to arm " ..
+    "(commands remain confirm-gated and audit-logged; see docs/WRITE-LANE-DESIGN.md)"
+end
+
+-- Confirm is a NAME MATCH, not a boolean: the caller must restate the
+-- target's name exactly. A boolean is one hallucination away.
+function shared.confirm_name(args, actual)
+  local c = args and args.confirm
+  if c == nil or c == "" then
+    return nil, "confirm required: pass confirm=\"" .. tostring(actual) ..
+      "\" (exact name of the target)"
+  end
+  if tostring(c) ~= tostring(actual) then
+    return nil, "confirm mismatch: expected \"" .. tostring(actual) ..
+      "\", got \"" .. tostring(c) .. "\" — refusing before any write"
+  end
+  return true
+end
+
+-- Audit every write: method, path, body length, body head. Bodies in this
+-- lane contain compose content (no credentials); webhook tokens never
+-- reach here (masking happens before any logging surface).
+function shared.audit_write(ctx, method, path, body)
+  local b = body ~= nil and tostring(body) or ""
+  local head = b:sub(1, 2048)
+  local trunc = #b > 2048 and ("… [" .. tostring(#b) .. " bytes total]") or ""
+  ctx.log("AUDIT write " .. tostring(method) .. " " .. tostring(path) ..
+          " (" .. tostring(#b) .. " bytes) " .. head .. trunc)
+end
+
+function shared.put(ctx, pkg, path, query, body, timeout_s)
+  local base, err = shared.require_config(pkg)
+  if base == nil then return { ok = false, error = err } end
+  local r = ctx.http.put(shared.normalize_base(base) .. "/api" .. path ..
+                         shared.build_query(query or {}),
+                         { headers = shared.headers(pkg),
+                           body = json.encode(body or {}),
+                           timeout_s = timeout_s or 30 })
+  return shared.interpret(r)
+end
+
+function shared.post(ctx, pkg, path, query, body, timeout_s)
+  local base, err = shared.require_config(pkg)
+  if base == nil then return { ok = false, error = err } end
+  local r = ctx.http.post(shared.normalize_base(base) .. "/api" .. path ..
+                          shared.build_query(query or {}),
+                          { headers = shared.headers(pkg),
+                            body = json.encode(body or {}),
+                            timeout_s = timeout_s or 30 })
+  return shared.interpret(r)
+end
+
+function shared.delete(ctx, pkg, path, timeout_s)
+  local base, err = shared.require_config(pkg)
+  if base == nil then return { ok = false, error = err } end
+  local r = ctx.http.delete(shared.normalize_base(base) .. "/api" .. path,
+                            { headers = shared.headers(pkg),
+                              timeout_s = timeout_s or 30 })
+  return shared.interpret(r)
+end
+
+-- Line diff summary for stack update presentation: counts + the changed
+-- regions (unified-ish, capped). O(n*m) LCS is fine at compose-file scale.
+function shared.diff_summary(old_s, new_s, cap)
+  cap = cap or 40
+  local function lines(s)
+    local t = {}
+    for l in tostring(s or ""):gmatch("([^\n]*)\n?") do t[#t+1] = l end
+    if #t > 1 and t[#t] == "" then t[#t] = nil end
+    return t
+  end
+  local a, b = lines(old_s), lines(new_s)
+  local n, m = #a, #b
+  -- LCS length table
+  -- +1 row/col of zeros: the walk reads lcs[i+1][j] / lcs[i][j+1] at the
+  -- edges (i==n or j==m); extra zeros are semantically "empty suffix = 0".
+  local lcs = {}
+  for i = 0, n + 1 do lcs[i] = {} for j = 0, m + 1 do lcs[i][j] = 0 end end
+  for i = n-1, 0, -1 do
+    for j = m-1, 0, -1 do
+      if a[i+1] == b[j+1] then lcs[i][j] = lcs[i+1][j+1] + 1
+      else lcs[i][j] = math.max(lcs[i+1][j], lcs[i][j+1]) end
+    end
+  end
+  -- Walk: emit removed/added hunks
+  local hunks, added, removed = {}, 0, 0
+  local i, j = 1, 1
+  local function flush(rem, add)
+    if #rem == 0 and #add == 0 then return end
+    hunks[#hunks+1] = { removed = rem, added = add }
+  end
+  local rem, add = {}, {}
+  while i <= n or j <= m do
+    if i <= n and j <= m and a[i] == b[j] then
+      flush(rem, add); rem, add = {}, {}; i = i + 1; j = j + 1
+    elseif j <= m and (i > n or lcs[i][j+1] >= lcs[i+1][j]) then
+      add[#add+1] = b[j]; j = j + 1
+    else
+      rem[#rem+1] = a[i]; i = i + 1
+    end
+  end
+  flush(rem, add)
+  for _, h in ipairs(hunks) do
+    removed = removed + #h.removed
+    added = added + #h.added
+  end
+  local shown, took = {}, 0
+  for _, h in ipairs(hunks) do
+    if took >= cap then break end
+    for _, l in ipairs(h.removed) do
+      if took < cap then shown[#shown+1] = "-" .. l; took = took + 1 end
+    end
+    for _, l in ipairs(h.added) do
+      if took < cap then shown[#shown+1] = "+" .. l; took = took + 1 end
+    end
+  end
+  return {
+    added_lines = added, removed_lines = removed,
+    hunks = #hunks, truncated = (#hunks > 0 and took >= cap) or (added + removed > took),
+    sample = table.concat(shown, "\n")
+  }
+end
+
+-- Mask webhook tokens in any list/output surface (standing rule: tokens
+-- are never logged, echoed, or error-included).
+function shared.mask_webhooks(list)
+  if type(list) ~= "table" then return list end
+  local out = {}
+  for idx, w in ipairs(list) do
+    local c = {}
+    for k, v in pairs(w) do
+      if k == "Token" and type(v) == "string" then
+        c[k] = #v > 4 and (v:sub(1,4) .. "…") or "…"
+      else
+        c[k] = v
+      end
+    end
+    out[idx] = c
+  end
+  return out
 end
 
 return shared

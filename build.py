@@ -14,18 +14,26 @@ def load_shared():
     return src
 
 
+def load_stack_write_shared():
+    src = open(os.path.join(ROOT, "scripts", "_stack_write_shared.lua"), encoding="utf-8").read()
+    return src
+
+
 def main():
     shared = load_shared()
     m = json.load(open(os.path.join(ROOT, "manifest", "manifest.json"), encoding="utf-8"))
     out = json.loads(json.dumps(m))
 
+    stack_shared = load_stack_write_shared()
     for c in out["commands"]:
         sf = c.pop("script_file", None)
         if sf is None:
             continue
         script = open(os.path.join(ROOT, sf), encoding="utf-8").read()
-        if "shared." in script:
+        if "shared." in script or "stack_write_shared." in script:
             script = shared + "\n" + script
+        if "stack_write_shared." in script:
+            script = stack_shared + "\n" + script
         assert "function run(" in script, f"{sf}: missing run(ctx)"
         c["script"] = script
 
