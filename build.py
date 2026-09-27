@@ -30,10 +30,15 @@ def main():
         if sf is None:
             continue
         script = open(os.path.join(ROOT, sf), encoding="utf-8").read()
+        # ORDER MATTERS: _shared.lua declares `local shared = {}`; helpers
+        # and commands must follow it LEXICALLY to capture the upvalue
+        # (sandbox has no global `shared` — field-caught, stubs masked it).
+        prefix = ""
         if "shared." in script or "stack_write_shared." in script:
-            script = shared + "\n" + script
+            prefix += shared + "\n"
         if "stack_write_shared." in script:
-            script = stack_shared + "\n" + script
+            prefix += stack_shared + "\n"
+        script = prefix + script
         assert "function run(" in script, f"{sf}: missing run(ctx)"
         c["script"] = script
 
